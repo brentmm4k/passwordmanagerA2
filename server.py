@@ -1,657 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Password Manager (Local)</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-/* (copy all the CSS exactly as in your original file – unchanged) */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:      #f9fafb;
-  --surface: #ffffff;
-  --border:  #e5e7eb;
-  --text:    #111827;
-  --muted:   #6b7280;
-  --primary: #2563eb;
-  --success: #16a34a;
-  --danger:  #dc2626;
-  --neutral: #6b7280;
-  --minerva: #7c3aed;
-  --radius:  8px;
-  --shadow:  0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-}
-body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
-.screen { display: none; }
-.screen.active { display: block; }
-#screen-login {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px;
-}
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 36px 40px;
-  width: 100%; max-width: 460px;
-}
-.card h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
-.sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
-#screen-main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
-#screen-main > div[id^="tab-"] { padding-top: 8px; }
-#screen-main h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
-#main-nav {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-#main-nav button {
-  padding: 7px 16px; border-radius: var(--radius); border: none;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  background: #e5e7eb; color: var(--text);
-  transition: opacity .15s;
-}
-#main-nav button:hover { opacity: .8; }
-#main-nav button.active { background: var(--primary); color: #fff; }
-#main-nav button.minerva { background: var(--minerva); color: #fff; }
-#main-nav button.minerva.active { background: var(--minerva); }
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
-.field input, .field select {
-  width: 100%; max-width: 340px;
-  padding: 9px 12px; border-radius: var(--radius);
-  border: 1px solid var(--border);
-  font-family: inherit; font-size: 14px; color: var(--text);
-  background: var(--surface); outline: none;
-  transition: border-color .15s;
-}
-.field input:focus, .field select:focus { border-color: var(--primary); }
-.row { display: flex; gap: 16px; flex-wrap: wrap; }
-.row .field { flex: 1; min-width: 120px; }
-.role-toggle { display: flex; gap: 0; }
-.role-toggle button {
-  flex: 1; padding: 8px; border: 1px solid var(--border);
-  background: #e5e7eb; color: var(--text);
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: background .15s;
-}
-.role-toggle button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-.role-toggle button:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
-.role-toggle button.active      { background: var(--primary); color: #fff; border-color: var(--primary); }
-button { cursor: pointer; font-family: inherit; }
-.btn-primary, .btn-success, .btn-danger, .btn-neutral, .btn-ghost {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 8px 18px; border: none; border-radius: var(--radius);
-  font-size: 13px; font-weight: 500;
-  transition: opacity .15s;
-}
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-success { background: var(--success); color: #fff; }
-.btn-danger  { background: var(--danger);  color: #fff; }
-.btn-neutral { background: #e5e7eb; color: var(--text); }
-.btn-ghost   { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-.btn-primary:hover, .btn-success:hover, .btn-danger:hover,
-.btn-neutral:hover, .btn-ghost:hover { opacity: .8; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; margin-bottom: 8px; }
-.msg { font-size: 13px; min-height: 20px; margin-top: 6px; }
-.msg.ok  { color: var(--success); }
-.msg.err { color: var(--danger);  }
-.search-wrap { margin-bottom: 14px; }
-.search-wrap input {
-  width: 100%; max-width: 360px;
-  padding: 9px 12px; border-radius: var(--radius);
-  border: 1px solid var(--border);
-  font-family: inherit; font-size: 14px;
-}
-.list-scroll { max-height: 60vh; overflow-y: auto; }
-.entry-row {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
-}
-.entry-site  { font-weight: 600; min-width: 140px; }
-.entry-user  { color: var(--muted); min-width: 160px; font-size: 13px; }
-.entry-pw    { font-family: 'IBM Plex Mono', monospace; font-size: 13px; min-width: 130px; }
-.entry-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.empty { color: var(--muted); font-size: 14px; padding: 20px 0; }
-.card-entry { padding: 12px 0; border-bottom: 1px solid var(--border); }
-.card-hdr   { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.card-holder{ font-weight: 600; }
-.card-expiry{ font-size: 12px; color: var(--muted); }
-.ctype-badge{
-  font-size: 11px; font-weight: 600; padding: 2px 8px;
-  border-radius: 4px; background: #dbeafe; color: var(--primary);
-}
-.card-row   { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.card-num   { font-family: 'IBM Plex Mono', monospace; font-size: 13px; min-width: 180px; }
-.card-cvv   { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
-.strength-wrap { margin-top: 6px; max-width: 340px; }
-.strength-row  { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--muted); }
-.bar-bg   { background: var(--border); border-radius: 4px; height: 6px; }
-.bar-fill { height: 6px; border-radius: 4px; transition: width .3s, background .3s; width: 0; }
-.slider-wrap { margin-bottom: 14px; max-width: 340px; }
-.slider-lbl  { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-input[type=range] { width: 100%; accent-color: var(--primary); }
-.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; max-width: 340px; }
-.check-label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
-.gen-result {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 12px; padding: 10px 14px;
-  background: #f3f4f6; border-radius: var(--radius);
-  font-family: 'IBM Plex Mono', monospace; font-size: 14px;
-  max-width: 500px;
-}
-.role-badge {
-  font-size: 11px; font-weight: 600; padding: 2px 7px;
-  border-radius: 4px; flex-shrink: 0;
-}
-.role-badge.student { background: #dbeafe; color: #1d4ed8; }
-.role-badge.faculty, .role-badge.staff { background: #ede9fe; color: var(--minerva); }
-#toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: #1f2937; color: #fff; padding: 8px 20px;
-  border-radius: 99px; font-size: 13px; font-weight: 500;
-  transition: transform .25s; pointer-events: none; z-index: 999;
-}
-#toast.show { transform: translateX(-50%) translateY(0); }
-#auth-section { display: none; }
-</style>
-</head>
-<body>
-<div id="app">
+import json
+import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-  <!-- LOGIN SCREEN -->
-  <div class="screen active" id="screen-login">
-    <div class="card">
-      <h1>🔒 Password Manager</h1>
-      <p class="sub" id="login-subtitle">Loading…</p>
+app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app)  # allow cross-origin requests (useful during development)
 
-      <div class="field">
-        <label>I am a</label>
-        <div class="role-toggle">
-          <button onclick="selectRole('student')" class="active" id="rb-student">Student</button>
-          <button onclick="selectRole('faculty')" id="rb-faculty">Faculty</button>
-          <button onclick="selectRole('staff')"   id="rb-staff">Staff</button>
-        </div>
-      </div>
+DATA_FILE = 'data.json'
 
-      <div id="auth-section">
-        <div class="field">
-          <label>Auth Code</label>
-          <input type="password" id="auth-code" placeholder="Enter your auth code">
-          <p style="color:var(--muted);font-size:12px;margin-top:4px">Faculty: faculty123 / Staff: staff123</p>
-        </div>
-      </div>
+# ---------------------------
+#  Helper: load/save data
+# ---------------------------
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        # Initial structure
+        return {
+            "master_hash": None,
+            "master_salt": None,
+            "vaults": {
+                "student": {"data": None},
+                "faculty": {"data": None},
+                "staff": {"data": None}
+            },
+            "auth_codes": {
+                "faculty": "faculty123",   # default demo codes – change them!
+                "staff": "staff123"
+            }
+        }
+    with open(DATA_FILE, 'r') as f:
+        return json.load(f)
 
-      <div class="field">
-        <label>Master Password</label>
-        <input type="password" id="login-pw" placeholder="Master password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div class="field" id="confirm-wrap">
-        <label>Confirm Password</label>
-        <input type="password" id="login-conf" placeholder="Confirm password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
 
-      <div class="btn-row">
-        <button class="btn-primary" id="login-btn" onclick="doLogin()">Create Vault</button>
-      </div>
-      <div class="msg" id="login-msg"></div>
-    </div>
-  </div>
+# ---------------------------
+#  API endpoints
+# ---------------------------
+@app.route('/')
+def serve_index():
+    return app.send_static_file('index.html')
 
-  <!-- MAIN SCREEN (same structure) -->
-  <div class="screen" id="screen-main">
-    <nav id="main-nav"></nav>
-    <div id="tab-passwords">
-      <h2>Saved Passwords</h2>
-      <div class="search-wrap"><input type="text" id="pw-search" placeholder="Search…" oninput="renderPasswords()"></div>
-      <div class="list-scroll" id="pw-list"></div>
-    </div>
-    <div id="tab-add" style="display:none">
-      <h2>Add Password</h2>
-      <div class="field"><label>Site / App</label><input type="text" id="add-site"></div>
-      <div class="field"><label>Username / Email</label><input type="text" id="add-user"></div>
-      <div class="field">
-        <label>Password</label>
-        <input type="password" id="add-pw" oninput="updateStrength(this.value,'add-strength-wrap','add-strength-bar','add-strength-lbl')">
-        <div class="strength-wrap" id="add-strength-wrap" style="display:none">
-          <div class="strength-row"><span>Strength</span><span id="add-strength-lbl"></span></div>
-          <div class="bar-bg"><div class="bar-fill" id="add-strength-bar"></div></div>
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="btn-neutral" onclick="generateIntoAdd()">Generate Password</button>
-        <button class="btn-success" onclick="doAddPassword()">Save</button>
-      </div>
-      <div class="msg" id="add-msg"></div>
-    </div>
-    <div id="tab-cards" style="display:none">
-      <h2>Saved Cards</h2>
-      <div class="list-scroll" id="card-list"></div>
-    </div>
-    <div id="tab-add-card" style="display:none">
-      <h2>Add Card</h2>
-      <div class="field"><label>Cardholder</label><input type="text" id="ac-holder"></div>
-      <div class="field"><label>Card Number</label><input type="text" id="ac-number" oninput="this.value=this.value.replace(/\D/g,'').slice(0,16)"></div>
-      <div class="row">
-        <div class="field"><label>Expiry (MM/YY)</label><input type="text" id="ac-expiry" maxlength="5" oninput="fmtExpiry(this)"></div>
-        <div class="field"><label>CVV</label><input type="password" id="ac-cvv" maxlength="4"></div>
-      </div>
-      <div class="field"><label>Card Type</label><select id="ac-type"><option>Visa</option><option>Mastercard</option><option>Amex</option><option>Other</option></select></div>
-      <div class="btn-row"><button class="btn-success" onclick="doAddCard()">Save Card</button></div>
-      <div class="msg" id="add-card-msg"></div>
-    </div>
-    <div id="tab-generate" style="display:none">
-      <h2>Generate Password</h2>
-      <div class="slider-wrap"><div class="slider-lbl"><span>Length</span><span id="gen-len-val">16</span></div><input type="range" id="gen-len" min="8" max="64" value="16" oninput="document.getElementById('gen-len-val').textContent=this.value"></div>
-      <div class="check-grid">
-        <label class="check-label"><input type="checkbox" id="gen-upper" checked> Uppercase</label>
-        <label class="check-label"><input type="checkbox" id="gen-lower" checked> Lowercase</label>
-        <label class="check-label"><input type="checkbox" id="gen-digits" checked> Digits</label>
-        <label class="check-label"><input type="checkbox" id="gen-symbols" checked> Symbols</label>
-      </div>
-      <button class="btn-primary" onclick="doGenerate()">Generate</button>
-      <div class="gen-result" id="gen-result" style="display:none"><span id="gen-output"></span><button class="btn-ghost" onclick="copyGen()">Copy</button></div>
-      <div class="msg" id="gen-msg"></div>
-    </div>
-    <div id="tab-minerva" style="display:none">
-      <h2 style="color:var(--minerva)">🟣 Minerva Database</h2>
-      <p class="sub" id="minerva-sub"></p>
-      <div class="search-wrap"><input type="text" id="minerva-search" placeholder="Search…" oninput="renderMinerva()"></div>
-      <div class="list-scroll" id="minerva-list"></div>
-    </div>
-  </div>
-</div>
-<div id="toast">Copied!</div>
+@app.route('/api/master', methods=['GET'])
+def get_master():
+    data = load_data()
+    if data['master_hash'] is None:
+        return jsonify({"exists": False})
+    return jsonify({
+        "exists": True,
+        "hash": data['master_hash'],
+        "salt": data['master_salt']
+    })
 
-<script>
-// ======================= LOCAL STORAGE VERSION =======================
-const MINERVA_DOMAIN = 'minerva.bsu.com';
+@app.route('/api/master', methods=['POST'])
+def set_master():
+    req = request.get_json()
+    hash_val = req.get('hash')
+    salt = req.get('salt')
+    if not hash_val or not salt:
+        return jsonify({"error": "Missing hash or salt"}), 400
 
-// Auth codes for faculty/staff (hardcoded – change if desired)
-const AUTH_CODES = { faculty: "faculty123", staff: "staff123" };
+    data = load_data()
+    # Only allow creation if master doesn't exist yet
+    if data['master_hash'] is not None:
+        return jsonify({"error": "Master already exists"}), 409
 
-let S = { cryptoKey: null, role: null, vaults: { student: null, faculty: null, staff: null } };
+    data['master_hash'] = hash_val
+    data['master_salt'] = salt
+    save_data(data)
+    return jsonify({"success": True})
 
-// ------------------------- Crypto helpers -------------------------
-const enc = s => new TextEncoder().encode(s);
-async function deriveKey(pw, salt) {
-  const km = await crypto.subtle.importKey('raw', enc(pw), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 390000, hash: 'SHA-256' },
-    km,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
-async function hashPw(pw, salt) {
-  const km = await crypto.subtle.importKey('raw', enc(pw), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 390000, hash: 'SHA-256' }, km, 256);
-  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-async function encVault(key, data) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc(JSON.stringify(data)));
-  const buf = new Uint8Array(12 + ct.byteLength);
-  buf.set(iv); buf.set(new Uint8Array(ct), 12);
-  return btoa(String.fromCharCode(...buf));
-}
-async function decVault(key, b64) {
-  const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0,12) }, key, buf.slice(12));
-  return JSON.parse(new TextDecoder().decode(pt));
-}
+@app.route('/api/vault/<role>', methods=['GET'])
+def get_vault(role):
+    if role not in ('student', 'faculty', 'staff'):
+        return jsonify({"error": "Invalid role"}), 400
+    data = load_data()
+    vault_data = data['vaults'].get(role, {}).get('data')
+    return jsonify({"data": vault_data})
 
-// ------------------------- LocalStorage backend -------------------------
-function getMasterData() {
-  const hash = localStorage.getItem('master_hash');
-  const saltRaw = localStorage.getItem('master_salt');
-  if (!hash || !saltRaw) return null;
-  return { hash, salt: new Uint8Array(JSON.parse(saltRaw)) };
-}
-function setMasterData(hash, saltArray) {
-  localStorage.setItem('master_hash', hash);
-  localStorage.setItem('master_salt', JSON.stringify(Array.from(saltArray)));
-}
-function masterExists() { return getMasterData() !== null; }
+@app.route('/api/vault/<role>', methods=['PUT'])
+def put_vault(role):
+    if role not in ('student', 'faculty', 'staff'):
+        return jsonify({"error": "Invalid role"}), 400
+    req = request.get_json()
+    encrypted_data = req.get('data')
+    if encrypted_data is None:
+        return jsonify({"error": "Missing data"}), 400
 
-async function verifyMaster(pw) {
-  const data = getMasterData();
-  if (!data) return false;
-  const hash = await hashPw(pw, data.salt);
-  if (hash !== data.hash) return false;
-  S.cryptoKey = await deriveKey(pw, data.salt);
-  return true;
-}
+    data = load_data()
+    if role not in data['vaults']:
+        data['vaults'][role] = {}
+    data['vaults'][role]['data'] = encrypted_data
+    save_data(data)
+    return jsonify({"success": True})
 
-async function createMaster(pw) {
-  const salt = crypto.getRandomValues(new Uint8Array(32));
-  const hash = await hashPw(pw, salt);
-  setMasterData(hash, salt);
-  S.cryptoKey = await deriveKey(pw, salt);
-}
+@app.route('/api/auth/<role>', methods=['GET'])
+def verify_auth_code(role):
+    if role not in ('faculty', 'staff'):
+        return jsonify({"valid": False}), 400
 
-async function loadVault(role) {
-  const encrypted = localStorage.getItem(`vault_${role}`);
-  if (!encrypted) return { passwords: [], cards: [] };
-  try { return await decVault(S.cryptoKey, encrypted); }
-  catch { return { passwords: [], cards: [] }; }
-}
-async function saveVault(role) {
-  const encrypted = await encVault(S.cryptoKey, S.vaults[role]);
-  localStorage.setItem(`vault_${role}`, encrypted);
-}
+    code = request.args.get('code', '')
+    data = load_data()
+    valid_codes = data.get('auth_codes', {})
+    expected = valid_codes.get(role)
+    return jsonify({"valid": code == expected})
 
-// ------------------------- Login -------------------------
-let selRole = 'student';
-function selectRole(r) {
-  selRole = r;
-  ['student','faculty','staff'].forEach(x => document.getElementById(`rb-${x}`).classList.toggle('active', x===r));
-  const authDiv = document.getElementById('auth-section');
-  authDiv.style.display = (r === 'faculty' || r === 'staff') ? 'block' : 'none';
-}
-async function doLogin() {
-  const btn = document.getElementById('login-btn');
-  const pw = document.getElementById('login-pw').value.trim();
-  setMsg('login-msg', '', '');
-
-  if (!pw) { setMsg('login-msg','Password required','err'); return; }
-
-  // Faculty/staff auth code check
-  if (selRole === 'faculty' || selRole === 'staff') {
-    const code = document.getElementById('auth-code').value.trim();
-    if (code !== AUTH_CODES[selRole]) { setMsg('login-msg','Invalid auth code','err'); return; }
-  }
-
-  const exists = masterExists();
-  if (!exists) {
-    const conf = document.getElementById('login-conf').value.trim();
-    if (pw !== conf) { setMsg('login-msg','Passwords do not match','err'); return; }
-    if (pw.length < 6) { setMsg('login-msg','At least 6 characters','err'); return; }
-    await createMaster(pw);
-  }
-
-  if (!await verifyMaster(pw)) { setMsg('login-msg','Incorrect master password','err'); return; }
-
-  S.role = selRole;
-  // Load all vaults (but we only need the current one for editing; Minerva needs all)
-  for (const r of ['student','faculty','staff']) {
-    S.vaults[r] = await loadVault(r);
-  }
-  showMain();
-}
-
-// ------------------------- UI -------------------------
-function showMain() {
-  document.getElementById('screen-login').classList.remove('active');
-  document.getElementById('screen-main').classList.add('active');
-  buildNav(); switchTab('passwords');
-}
-function buildNav() {
-  const tabs = [
-    { id: 'passwords', label: 'Passwords' },
-    { id: 'add', label: 'Add PW' },
-    { id: 'cards', label: 'Cards' },
-    { id: 'add-card', label: 'Add Card' },
-    { id: 'generate', label: 'Generate' }
-  ];
-  if (['faculty','staff'].includes(S.role))
-    tabs.push({ id: 'minerva', label: '🟣 Minerva DB', cls: 'minerva' });
-  tabs.push({ id: 'lock', label: 'Lock' });
-  document.getElementById('main-nav').innerHTML = tabs.map(t => `<button id="nav-${t.id}" class="${t.cls||''}" onclick="navClick('${t.id}')">${t.label}</button>`).join('');
-}
-function navClick(id) { if(id==='lock') doLock(); else switchTab(id); }
-function switchTab(id) {
-  document.querySelectorAll('#screen-main>div[id^="tab-"]').forEach(el => el.style.display='none');
-  const tab = document.getElementById(`tab-${id}`);
-  if(tab) tab.style.display='block';
-  document.querySelectorAll('#main-nav button').forEach(b=>b.classList.remove('active'));
-  const activeBtn = document.getElementById(`nav-${id}`);
-  if(activeBtn) activeBtn.classList.add('active');
-  if(id==='passwords') renderPasswords();
-  if(id==='cards') renderCards();
-  if(id==='minerva') renderMinerva();
-}
-function doLock() {
-  S.cryptoKey = null; S.role = null; S.vaults = {};
-  document.getElementById('screen-main').classList.remove('active');
-  document.getElementById('screen-login').classList.add('active');
-  document.getElementById('login-pw').value = '';
-  document.getElementById('login-conf').value = '';
-  document.getElementById('auth-code').value = '';
-  setMsg('login-msg','','');
-}
-
-// ------------------------- Password functions (unchanged except saveVault calls) -------------------------
-function renderPasswords() {
-  const q = document.getElementById('pw-search').value.trim().toLowerCase();
-  const pws = S.vaults[S.role].passwords;
-  const hits = q ? pws.filter(e => e.site.toLowerCase().includes(q) || e.username.toLowerCase().includes(q)) : pws;
-  const list = document.getElementById('pw-list');
-  if(!hits.length) { list.innerHTML = `<div class="empty">No entries.</div>`; return; }
-  list.innerHTML = hits.map((e,i) => {
-    const origIdx = pws.indexOf(e);
-    const safePass = x(e.password).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<div class="entry-row">
-      <span class="entry-site">${x(e.site)}</span>
-      <span class="entry-user">${x(e.username)}</span>
-      <span class="entry-pw" id="pv${origIdx}">${'•'.repeat(Math.min(e.password.length,16))}</span>
-      <div class="entry-actions">
-        <button class="btn-neutral btn-sm" onclick="togglePw(${origIdx})" id="pb${origIdx}">Show</button>
-        <button class="btn-neutral btn-sm" onclick="copyText('${safePass}','Password')">Copy</button>
-        <button class="btn-danger btn-sm" onclick="deletePw(${origIdx})">Delete</button>
-      </div></div>`;
-  }).join('');
-}
-function togglePw(i) {
-  const e = S.vaults[S.role].passwords[i];
-  const lbl = document.getElementById(`pv${i}`);
-  const btn = document.getElementById(`pb${i}`);
-  if(btn.textContent === 'Show') { lbl.textContent = e.password; btn.textContent = 'Hide'; }
-  else { lbl.textContent = '•'.repeat(Math.min(e.password.length,16)); btn.textContent = 'Show'; }
-}
-async function deletePw(i) {
-  S.vaults[S.role].passwords.splice(i,1);
-  await saveVault(S.role); renderPasswords();
-}
-function updateStrength(pw, wrapId, barId, lblId) {
-  const wrap = document.getElementById(wrapId);
-  const bar = document.getElementById(barId);
-  const lbl = document.getElementById(lblId);
-  if(!pw) { wrap.style.display='none'; return; }
-  wrap.style.display='block';
-  const { score, label, color } = strength(pw);
-  lbl.textContent = label; lbl.style.color = color;
-  bar.style.width = Math.round(score/8*100)+'%';
-  bar.style.background = color;
-}
-function generateIntoAdd() {
-  const pw = genPw(16, true, true, true, true);
-  document.getElementById('add-pw').value = pw;
-  updateStrength(pw,'add-strength-wrap','add-strength-bar','add-strength-lbl');
-  setMsg('add-msg',`Generated: ${pw}`,'ok');
-}
-async function doAddPassword() {
-  const site = document.getElementById('add-site').value.trim();
-  const user = document.getElementById('add-user').value.trim();
-  const pw = document.getElementById('add-pw').value;
-  if(!site || !user || !pw) { setMsg('add-msg','All fields required','err'); return; }
-  S.vaults[S.role].passwords.push({ site, username: user, password: pw });
-  await saveVault(S.role);
-  document.getElementById('add-site').value='';
-  document.getElementById('add-user').value='';
-  document.getElementById('add-pw').value='';
-  updateStrength('','add-strength-wrap','add-strength-bar','add-strength-lbl');
-  setMsg('add-msg',`Saved ${site}`,'ok');
-}
-
-// Cards
-function maskCard(n) { let d=n.replace(/\D/g,''); return d.length<4?'•'.repeat(d.length):'•••• •••• •••• '+d.slice(-4); }
-function renderCards() {
-  const cards = S.vaults[S.role].cards;
-  const list = document.getElementById('card-list');
-  if(!cards.length) { list.innerHTML='<div class="empty">No cards.</div>'; return; }
-  list.innerHTML = cards.map((c,i)=>`
-    <div class="card-entry">
-      <div class="card-hdr"><span class="ctype-badge">${x(c.card_type)}</span><span class="card-holder">${x(c.cardholder)}</span><span class="card-expiry">Expires ${x(c.expiry)}</span></div>
-      <div class="card-row">
-        <span class="card-num" id="cn${i}">${maskCard(c.number)}</span>
-        <button class="btn-neutral btn-sm" onclick="toggleCard(${i},'num')" id="cnb${i}">Show Number</button>
-        <span style="color:var(--muted)">CVV:</span>
-        <span class="card-cvv" id="cv${i}">•••</span>
-        <button class="btn-neutral btn-sm" onclick="toggleCard(${i},'cvv')" id="cvb${i}">Show CVV</button>
-        <button class="btn-danger btn-sm" onclick="deleteCard(${i})">Delete</button>
-      </div>
-    </div>`).join('');
-}
-function toggleCard(i,field) {
-  const c = S.vaults[S.role].cards[i];
-  if(field==='num') {
-    const lbl = document.getElementById(`cn${i}`), btn = document.getElementById(`cnb${i}`);
-    if(btn.textContent==='Show Number') { lbl.textContent = c.number.replace(/\D/g,'').match(/.{1,4}/g).join(' '); btn.textContent='Hide Number'; }
-    else { lbl.textContent = maskCard(c.number); btn.textContent='Show Number'; }
-  } else {
-    const lbl = document.getElementById(`cv${i}`), btn = document.getElementById(`cvb${i}`);
-    if(btn.textContent==='Show CVV') { lbl.textContent = c.cvv; btn.textContent='Hide CVV'; }
-    else { lbl.textContent='•••'; btn.textContent='Show CVV'; }
-  }
-}
-async function deleteCard(i) {
-  S.vaults[S.role].cards.splice(i,1);
-  await saveVault(S.role); renderCards();
-}
-function fmtExpiry(el) {
-  let v = el.value.replace(/\D/g,'').slice(0,4);
-  el.value = v.length>2 ? v.slice(0,2)+'/'+v.slice(2) : v;
-}
-async function doAddCard() {
-  const holder = document.getElementById('ac-holder').value.trim();
-  const number = document.getElementById('ac-number').value.replace(/\D/g,'');
-  const expiry = document.getElementById('ac-expiry').value.trim();
-  const cvv = document.getElementById('ac-cvv').value.trim();
-  const ctype = document.getElementById('ac-type').value;
-  if(!holder||!number||!expiry||!cvv) { setMsg('add-card-msg','All fields required','err'); return; }
-  if(!/^\d{13,19}$/.test(number)) { setMsg('add-card-msg','Invalid card number','err'); return; }
-  if(!/^\d{2}\/\d{2}$/.test(expiry)) { setMsg('add-card-msg','Expiry MM/YY','err'); return; }
-  if(!/^\d{3,4}$/.test(cvv)) { setMsg('add-card-msg','CVV 3-4 digits','err'); return; }
-  S.vaults[S.role].cards.push({ cardholder: holder, number, expiry, cvv, card_type: ctype });
-  await saveVault(S.role);
-  document.getElementById('ac-holder').value='';
-  document.getElementById('ac-number').value='';
-  document.getElementById('ac-expiry').value='';
-  document.getElementById('ac-cvv').value='';
-  setMsg('add-card-msg','Card saved','ok');
-}
-
-// Generate
-function doGenerate() {
-  const pw = genPw(+document.getElementById('gen-len').value,
-    document.getElementById('gen-upper').checked,
-    document.getElementById('gen-lower').checked,
-    document.getElementById('gen-digits').checked,
-    document.getElementById('gen-symbols').checked);
-  document.getElementById('gen-output').textContent = pw;
-  document.getElementById('gen-result').style.display='flex';
-  setMsg('gen-msg',`Strength: ${strength(pw).label}`,'ok');
-}
-function copyGen() { copyText(document.getElementById('gen-output').textContent,'Password'); }
-
-// Minerva
-function renderMinerva() {
-  document.getElementById('minerva-sub').innerHTML = `Showing <code>${MINERVA_DOMAIN}</code> entries across all vaults. Accessible to ${S.role}.`;
-  const q = document.getElementById('minerva-search').value.trim().toLowerCase();
-  let all = [];
-  for(const r of ['student','faculty','staff']) {
-    (S.vaults[r]?.passwords || []).forEach((e,idx) => {
-      if(e.site.toLowerCase().includes(MINERVA_DOMAIN))
-        all.push({ ...e, _r: r, _i: idx });
-    });
-  }
-  const hits = q ? all.filter(e=>e.username.toLowerCase().includes(q)) : all;
-  const list = document.getElementById('minerva-list');
-  if(!hits.length) { list.innerHTML = `<div class="empty">No Minerva entries.</div>`; return; }
-  list.innerHTML = `<p><b>${hits.length}</b> account(s) found.</p>` +
-    hits.map((e,i) => {
-      const safePass = x(e.password).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return `<div class="entry-row">
-        <span class="role-badge ${e._r}">${e._r}</span>
-        <span class="entry-site" style="color:var(--minerva)">${x(e.site)}</span>
-        <span class="entry-user">${x(e.username)}</span>
-        <span class="entry-pw" id="mv${i}">${'•'.repeat(Math.min(e.password.length,16))}</span>
-        <div class="entry-actions">
-          <button class="btn-neutral btn-sm" onclick="toggleMinerva(${i},this,'${safePass}')">Show</button>
-          <button class="btn-danger btn-sm" onclick="deleteMinerva('${e._r}',${e._i})">Delete</button>
-        </div></div>`;
-    }).join('');
-}
-function toggleMinerva(i,btn,pw) {
-  const lbl = document.getElementById(`mv${i}`);
-  if(btn.textContent==='Show') { lbl.textContent = pw; btn.textContent='Hide'; }
-  else { lbl.textContent = '•'.repeat(Math.min(pw.length,16)); btn.textContent='Show'; }
-}
-async function deleteMinerva(role,idx) {
-  S.vaults[role].passwords.splice(idx,1);
-  await saveVault(role);
-  renderMinerva();
-}
-
-// Utilities
-function genPw(len=16, upper=true, lower=true, digits=true, syms=true) {
-  const U='ABCDEFGHIJKLMNOPQRSTUVWXYZ', L='abcdefghijklmnopqrstuvwxyz', D='0123456789', Y='!@#$%^&*()_+-=[]{}|;:,.<>?';
-  let pool='', must=[];
-  if(upper) { pool+=U; must.push(pick(U)); }
-  if(lower) { pool+=L; must.push(pick(L)); }
-  if(digits) { pool+=D; must.push(pick(D)); }
-  if(syms) { pool+=Y; must.push(pick(Y)); }
-  if(!pool) pool=U+L+D;
-  const rest = Array.from({ length: len-must.length }, ()=>pick(pool));
-  const all = [...must, ...rest];
-  for(let i=all.length-1; i>0; i--) { const j = rnd(i+1); [all[i],all[j]] = [all[j],all[i]]; }
-  return all.join('');
-}
-function rnd(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; }
-function pick(s) { return s[rnd(s.length)]; }
-function strength(pw) {
-  if(!pw) return { score:0, label:'', color:'' };
-  let sc=0, cl=0;
-  if(/[A-Z]/.test(pw)) sc++,cl++;
-  if(/[a-z]/.test(pw)) sc++,cl++;
-  if(/\d/.test(pw)) sc++,cl++;
-  if(/[^A-Za-z\d]/.test(pw)) sc++,cl++;
-  if(cl===4) { if(pw.length>=8) sc++; if(pw.length>=12) sc++; if(pw.length>=16) sc++; if(pw.length>=20) sc++; }
-  if(sc<=2) return { score:sc, label:'Weak', color:'#dc2626' };
-  if(sc<=4) return { score:sc, label:'Mediocre', color:'#d97706' };
-  if(sc<=6) return { score:sc, label:'Outstanding', color:'#2563eb' };
-  return { score:sc, label:'Amazing', color:'#16a34a' };
-}
-function x(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function setMsg(id,text,type) {
-  const el = document.getElementById(id);
-  el.textContent = text; el.className = 'msg'+(type?' '+type:'');
-  if(text) setTimeout(()=>{ if(el.textContent===text) el.textContent=''; },4000);
-}
-let _toastT;
-function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'),1800); }
-function copyText(text,label='') { navigator.clipboard.writeText(text).then(()=>toast((label?label+' ':'')+'copied!')); }
-
-// Initial load
-document.addEventListener('DOMContentLoaded', () => {
-  const exists = masterExists();
-  document.getElementById('login-subtitle').textContent = exists
-    ? 'Select role and enter master password to unlock.'
-    : 'Create a master password to get started.';
-  document.getElementById('login-btn').textContent = exists ? 'Unlock' : 'Create Vault';
-  document.getElementById('confirm-wrap').style.display = exists ? 'none' : 'block';
-});
-</script>
-</body>
-</html>
+# ---------------------------
+#  Run the server
+# ---------------------------
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
